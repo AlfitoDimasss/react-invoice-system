@@ -1,6 +1,7 @@
 const {DataTypes} = require('sequelize');
 const sequelize = require('../config/config');
 
+// Create invoice_products Table
 const InvoiceProduct = sequelize.define('invoice_product', {
     invoiceId: {
         type: DataTypes.INTEGER,

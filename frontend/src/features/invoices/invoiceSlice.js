@@ -1,5 +1,8 @@
 import {createSlice} from "@reduxjs/toolkit";
 
+// Redux slice for Invoice
+
+// Initial state
 const initialState = {
     date: '',
     customerName: '',
@@ -8,6 +11,7 @@ const initialState = {
     products: []
 }
 
+// Define slice for invoice state
 const invoiceSlice = createSlice({
     name: 'invoice',
     initialState,

@@ -1,7 +1,8 @@
-import React, {useState} from 'react';
-import axios from 'axios';
+import {useState} from 'react';
+import {toast} from "react-toastify";
 import {FaCirclePlus} from 'react-icons/fa6'
 import {useDispatch, useSelector} from "react-redux";
+import axios from 'axios';
 
 import {productData} from "../data/products.js";
 import {
@@ -12,19 +13,27 @@ import {
     resetInvoice,
     addProduct
 } from '../features/invoices/invoiceSlice.js'
-
 import {fetchInvoices} from "../features/invoiceLists/invoiceListSlice.js";
-import {toast} from "react-toastify";
+
+import ProductTable from "./ProductTable.jsx";
+import {convertCurrency} from "../utility/utility.js";
 
 const InvoiceForm = ({handleToggleShowForm}) => {
+    // Init state for product input
     const [productInput, setProductInput] = useState('');
+
+    // Init state for product suggestions
     const [productSuggestions, setProductSuggestions] = useState([]);
 
+    // Setup dispatch and get state from redux invoice state
     const dispatch = useDispatch()
     const {date, customerName, salespersonName, notes, products} = useSelector(state => state.invoice)
 
+    // Function handler for product suggestion
     const handleProductChange = (e) => {
         setProductInput(e.target.value);
+
+        // Compare keyword from input to data products, if it founds similar items, it will be suggested to user
         if (e.target.value.length > 1) {
             const suggestions = productData.filter(product =>
                 product.productName.toLowerCase().includes(e.target.value.toLowerCase())
@@ -35,7 +44,9 @@ const InvoiceForm = ({handleToggleShowForm}) => {
         }
     };
 
+    // Function handler when user add product to chart
     const handleAddProduct = (product) => {
+        // If item already in chart, it will increase the quantity, but if not it will add the product item
         if (products.find(item => item.productName === product.productName)) {
             dispatch(addProduct(products.map(item => item.productName === product.productName ? {
                 ...item,
@@ -48,20 +59,17 @@ const InvoiceForm = ({handleToggleShowForm}) => {
         setProductSuggestions([]);
     };
 
+    // Function handler when user submit to create the Invoice
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Check to make sure all data is not null
         if (!date || !customerName || !salespersonName || !products.length) {
-            alert('All mandatory fields must be filled');
+            toast('All mandatory fields must be filled')
             return;
         }
 
-        console.log(date,
-            customerName,
-            salespersonName,
-            notes,
-            products)
-
+        // Fetch POST request to server to create Invoice and InvoiceProduct data
         try {
             await axios.post('http://localhost:3000/api/invoices', {
                 date,
@@ -70,16 +78,18 @@ const InvoiceForm = ({handleToggleShowForm}) => {
                 notes,
                 products
             });
+            // Notify the user if invoice has successfully created
             toast('Invoice created successfully')
-            // alert();
             dispatch(resetInvoice())
             handleToggleShowForm()
             dispatch(fetchInvoices({page: 0, size: 6}));
         } catch (error) {
-            alert('Error creating invoice');
+            // Notify the user if there is some error
+            toast('Error creating invoice')
         }
     };
 
+    // Render UI
     return (
         <div className='content w-full border-2 border-blue-500 rounded p-5 my-10 bg-white'>
             <h1 className='text-2xl font-bold text-center mb-5'>Create Invoice</h1>
@@ -123,7 +133,7 @@ const InvoiceForm = ({handleToggleShowForm}) => {
                             <div key={product.productName}>
                                 <div
                                     className='border-2 border-blue-500 p-2 my-2 rounded-lg flex justify-between items-center'>
-                                    <div>{product.productName} - Rp {product.sellingPrice}</div>
+                                    <div>{product.productName} - Rp {convertCurrency(product.sellingPrice)}</div>
                                     <FaCirclePlus className='text-blue-500 text-xl cursor-pointer'
                                                   onClick={() => handleAddProduct(product)}/>
                                 </div>
@@ -134,53 +144,7 @@ const InvoiceForm = ({handleToggleShowForm}) => {
                 {products.length > 0 && (
                     <div>
                         <p className='text-base font-medium leading-6 text-gray-900 mb-2'>Selected Product</p>
-
-                        <div className="relative overflow-x-auto rounded-lg">
-                            <table className="w-full text-sm text-left rtl:text-right text-gray-500">
-                                <thead
-                                    className="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">
-                                        Product Name
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Product Image
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Product Price
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Quantity
-                                    </th>
-                                    <th scope="col" className="px-6 py-3">
-                                        Total
-                                    </th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {products.map(product => (
-                                    <tr className="bg-white border-b" key={product.productName}>
-                                        <th scope="row"
-                                            className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"> {product.productName}
-                                        </th>
-                                        <td className="px-6 py-4">
-                                            <img src={product.productPicture} alt={product.productName}
-                                                 className='w-20'/>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {product.sellingPrice}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {product.quantity}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {product.sellingPrice * product.quantity}
-                                        </td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <ProductTable products={products}/>
                     </div>
                 )}
                 <button type="submit"

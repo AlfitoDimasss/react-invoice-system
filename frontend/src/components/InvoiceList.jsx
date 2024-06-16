@@ -1,11 +1,12 @@
-import React, {useEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import Modal from 'react-modal'
 
+import ProductTable from "./ProductTable.jsx";
 import {fetchInvoices} from "../features/invoiceLists/invoiceListSlice.js";
+import {convertDate, convertCurrency} from "../utility/utility.js";
 
-Modal.setAppElement('#root')
-
+// Custom styles for modal
 const customStyles = {
     content: {
         top: '50%',
@@ -14,29 +15,35 @@ const customStyles = {
         bottom: 'auto',
         marginRight: '-50%',
         transform: 'translate(-50%, -50%)',
-        width: '33%',
+        width: '45%',
         borderRadius: '10px'
     },
 };
 
-const InvoiceList = ({handleToggleShowForm, showForm, children}) => {
-    const dispatch = useDispatch();
-    const {invoices, totalPages, currentPage, loading, error} = useSelector((state) => state.invoiceList);
+// Set modal parent element
+Modal.setAppElement('#root')
 
+const InvoiceList = ({handleToggleShowForm, showForm, children}) => {
+    // Setup dispatch and invoiceList state from redux
+    const dispatch = useDispatch();
+    const {invoices, totalPages, loading, error} = useSelector((state) => state.invoiceList);
+
+    // Setup state for modal
     const [modalIsOpen, setModalIsOpen] = useState(false)
     const [modalInvoice, setModalInvoice] = useState({})
 
+    // Fetching invoices data with pagination
     useEffect(() => {
         dispatch(fetchInvoices({page: 0, size: 6}));
     }, [dispatch]);
 
+    // Function handler to handling modal display
     const handleToggleModal = (invoice = {}) => {
         setModalIsOpen(prevState => !prevState)
         setModalInvoice(invoice)
-        console.log(modalInvoice)
-        console.log(modalIsOpen)
     }
 
+    // Function handler when page changed
     const handlePageChange = (page) => {
         dispatch(fetchInvoices({page, size: 6}));
     };
@@ -72,7 +79,7 @@ const InvoiceList = ({handleToggleShowForm, showForm, children}) => {
                         <p className='text-xs text-slate-500'>Salesperson Name</p>
                         <h3 className='font-semibold text-sm mb-2'>{invoice.salespersonName}</h3>
                         <p className='text-xs text-slate-500'>Total Amount</p>
-                        <h3 className='font-semibold text-sm mb-2'>${invoice.invoice_products.reduce((total, product) => total + (product.sellingPrice * product.quantity), 0)}</h3>
+                        <h3 className='font-semibold text-sm mb-2'>Rp {convertCurrency(invoice.invoice_products.reduce((total, product) => total + (product.sellingPrice * product.quantity), 0))}</h3>
                         <p className='text-xs text-slate-500'>Notes</p>
                         <h3 className='font-semibold text-sm mb-2'>{invoice.notes}</h3>
                     </div>
@@ -91,59 +98,36 @@ const InvoiceList = ({handleToggleShowForm, showForm, children}) => {
                 style={customStyles}
                 contentLabel="Example Modal"
             >
-                <div className='flex justify-between items-center mb-5'>
+                <div className='flex justify-between items-center mb-1'>
                     <h3 className='text-xl font-bold'>Invoice Product Detail</h3>
                     <button onClick={handleToggleModal}
                             className='bg-blue-500 px-2 py-1 text-xs text-white rounded-full'>X
                     </button>
                 </div>
-                <div className="relative overflow-x-auto rounded-lg">
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500">
-                        <thead
-                            className="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                            <th scope="col" className="px-6 py-3">
-                                Product Name
-                            </th>
-                            <th scope="col" className="px-6 py-3">
-                                Product Image
-                            </th>
-                            <th scope="col" className="px-6 py-3">
-                                Product Price
-                            </th>
-                            <th scope="col" className="px-6 py-3">
-                                Quantity
-                            </th>
-                            <th scope="col" className="px-6 py-3">
-                                Total
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {modalInvoice.invoice_products && modalInvoice.invoice_products.map(product => (
-                            <tr className="bg-white border-b" key={product.productName}>
-                                <th scope="row"
-                                    className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"> {product.productName}
-                                </th>
-                                <td className="px-6 py-4">
-                                    <img src={product.productPicture} alt={product.productName}
-                                         className='w-20'/>
-                                </td>
-                                <td className="px-6 py-4">
-                                    {product.sellingPrice}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {product.quantity}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {product.sellingPrice * product.quantity}
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
+                <p className='font-semibold mb-4'>#{modalInvoice.id} <span
+                    className='text-xs text-slate-500 font-normal ml-4'>{convertDate(modalInvoice.date)}</span></p>
+                <div className='flex justify-between mb-5'>
+                    <div>
+                        <p className='text-xs text-slate-500'>Customer Name</p>
+                        <p>{modalInvoice.customerName}</p>
+                    </div>
+                    <div>
+                        <p className='text-slate-500 text-xs'>Salesperson Name</p>
+                        <p>{modalInvoice.salespersonName}</p>
+                    </div>
                 </div>
-
+                {modalInvoice.invoice_products &&
+                    <ProductTable products={modalInvoice.invoice_products}>
+                        <tr className="bg-white border-b">
+                            <th scope="row" colSpan='4'
+                                className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">Total
+                            </th>
+                            <td className="px-6 py-4 font-bold">
+                                Rp {convertCurrency(modalInvoice.invoice_products.reduce((total, product) => total + (product.sellingPrice * product.quantity), 0))}
+                            </td>
+                        </tr>
+                    </ProductTable>
+                }
             </Modal>
         </div>
     );

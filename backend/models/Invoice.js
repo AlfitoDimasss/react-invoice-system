@@ -1,6 +1,7 @@
 const {DataTypes} = require('sequelize')
 const sequelize = require('../config/config')
 
+// Create invoice Table
 const Invoice = sequelize.define('invoice', {
     date: {
         type: DataTypes.DATE,

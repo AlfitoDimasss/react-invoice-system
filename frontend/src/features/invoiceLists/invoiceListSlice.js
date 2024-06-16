@@ -1,6 +1,9 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import axios from 'axios';
 
+// Redux slice for InvoiceList
+
+// Setup function to fetch all invoices from server
 export const fetchInvoices = createAsyncThunk(
     'invoices/fetchInvoices',
     async ({page, size}) => {
@@ -9,6 +12,7 @@ export const fetchInvoices = createAsyncThunk(
     }
 );
 
+// Define slice for invoiceList state
 const invoiceListSlice = createSlice({
     name: 'invoiceList',
     initialState: {
@@ -20,6 +24,7 @@ const invoiceListSlice = createSlice({
         error: null
     },
     reducers: {},
+    // Define builder extra reducer for fetching status
     extraReducers: (builder) => {
         builder.addCase(fetchInvoices.pending, (state) => {
             console.log('Pending')

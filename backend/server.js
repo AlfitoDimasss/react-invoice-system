@@ -1,61 +1,89 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const mysql = require('mysql')
+// Import module
+const express = require('express');
+const bodyParser = require('body-parser');
 const cors = require('cors')
 
-const app = express()
-app.use(bodyParser.json())
+// Import config
+const sequelize = require('./config/config');
+const {Invoice, InvoiceProduct} = require('./models/models');
+
+// Express App config
+const app = express();
+app.use(bodyParser.json());
 app.use(cors())
 
-// MySQL Config
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'root',
-    database: 'widatech_submission'
-})
-
-// Connect DB
-db.connect(err => {
-    if (err) throw err;
-    console.log('MySQL Connected...');
+// Syncing ORM with Database
+sequelize.sync().then(() => {
+    console.log('Database & tables created!');
 });
 
-// Route for POST invoice
-app.post('/api/invoices', (req, res) => {
-    const {date, customer_name, salesperson_name, notes, products} = req.body;
+// POST Invoice Route
+app.post('/api/invoices', async (req, res) => {
+    // Get invoice data from HTTP Body
+    const {date, customerName, salespersonName, notes, products} = req.body;
 
-    if (!date || !customer_name || !salesperson_name || !products.length) {
+    // Return if data is null
+    if (!date || !customerName || !salespersonName || !products.length) {
         return res.status(400).send('All mandatory fields must be filled');
     }
 
-    const invoiceQuery = 'INSERT INTO invoices (date, customer_name, salesperson_name, notes) VALUES (?, ?, ?, ?)';
-    db.query(invoiceQuery, [date, customer_name, salesperson_name, notes], (err, result) => {
-        if (err) throw err;
+    try {
+        // Create Invoice data
+        const invoice = await Invoice.create({
+            date,
+            customerName,
+            salespersonName,
+            notes
+        });
 
-        const invoiceId = result.insertId;
-
-        const productQueries = products.map(product => {
-            return new Promise((resolve, reject) => {
-                const {product_name, product_picture, production_price, selling_price, quantity} = product;
-                const productQuery = 'INSERT INTO invoice_products (invoice_id, product_name, product_picture, production_price, selling_price, quantity) VALUES (?, ?, ?, ?, ?, ?)';
-                db.query(productQuery, [invoiceId, product_name, product_picture, production_price, selling_price, quantity], (err, result) => {
-                    if (err) return reject(err);
-                    resolve(result);
-                });
+        // Create Invoice Product Data
+        const productPromises = products.map(product => {
+            return InvoiceProduct.create({
+                invoiceId: invoice.id,
+                productName: product.productName,
+                productPicture: product.productPicture,
+                productionPrice: product.productionPrice,
+                sellingPrice: product.sellingPrice,
+                quantity: product.quantity
             });
         });
 
-        Promise.all(productQueries)
-            .then(() => {
-                res.status(201).send('Invoice created successfully');
-            })
-            .catch(err => {
-                res.status(500).send('Error saving products');
-            });
-    });
+        await Promise.all(productPromises);
+
+        res.status(201).send('Invoice created successfully');
+    } catch (error) {
+        res.status(500).send('Error creating invoice');
+    }
 });
 
+// GET Invoices route
+app.get('/api/invoices', async (req, res) => {
+    // Get pagination data from HTTP Query
+    const {page, size} = req.query;
+    const limit = size ? parseInt(size) : 10;
+    const offset = page ? page * limit : 0;
+
+    try {
+        // Get all invoices
+        const invoices = await Invoice.findAndCountAll({
+            limit: limit,
+            offset: offset,
+            order: [['createdAt', 'DESC']],
+            include: [InvoiceProduct]
+        });
+
+        res.status(200).send({
+            totalItems: invoices.count,
+            invoices: invoices.rows,
+            totalPages: Math.ceil(invoices.count / limit),
+            currentPage: page ? parseInt(page) : 0
+        });
+    } catch (error) {
+        res.status(500).send('Error fetching invoices');
+    }
+});
+
+// Run the server
 app.listen(3000, () => {
     console.log('Server running on port 3000');
 });
