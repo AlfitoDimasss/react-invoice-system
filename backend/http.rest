@@ -1,0 +1,25 @@
+POST http://localhost:3000/api/invoices
+Content-Type: application/json
+
+{
+  "date": "2024-06-14",
+  "customer_name": "winda",
+  "salesperson_name": "fito",
+  "notes": "lorem ipsum",
+  "products": [
+    {
+      "product_name": "Headphone",
+      "product_picture": "img/headphone.jpg",
+      "production_price": 50000,
+      "selling_price": 60000,
+      "quantity": 2
+    },
+    {
+      "product_name": "Laptop Charger",
+      "product_picture": "img/laptop-charger.jpg",
+      "production_price": 200000,
+      "selling_price": 240000,
+      "quantity": 3
+    }
+  ]
+}
